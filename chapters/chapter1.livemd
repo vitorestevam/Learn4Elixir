@@ -847,7 +847,7 @@ idade
 curso = %{nome: "Ciência da Computação", duracao: 5, inicio: 2023}
 
 # Casando o mapa, mas ignorando nome
-%{duracao: duracao, inicio: inicio} = curso
+%{nome:_, duracao: duracao, inicio: inicio} = curso
 
 # soma os valores extraídos do mapa/registro
 inicio + duracao
