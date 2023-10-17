@@ -193,7 +193,7 @@ A última cláusula com true é opcional, mas é uma boa prática incluí-la par
 Aqui está um exemplo de uso do cond no Livebook:
 
 ```elixir
-x = 5
+x = :a
 
 cond do
   is_number(x) and x == 0 ->
@@ -381,10 +381,39 @@ Para completar esta tarefa, você precisará usar estruturas condicionais, como 
 
 ```elixir
 defmodule ElixGames.Encontro do
-  def determina_encontro(localizacao, probabilidade) do
-    # Implemente a lógica de determinação do resultado do encontro aqui
+  def determina_encontro(localizacao, probabilidade)
+      when probabilidade >= 0 and probabilidade <= 100 do
+    cond do
+      localizacao == "Bosque Encantado" ->
+        if probabilidade <= 90 do
+          "Amigável 😅"
+        else
+          "Hostil 😡"
+        end
+
+      localizacao == "Caverna Escura" ->
+        if probabilidade <= 60 do
+          "Amigável 😅"
+        else
+          "Hostil 😡"
+        end
+
+      localizacao == "Torre Misteriosa" ->
+        if probabilidade <= 30 do
+          "Amigável 😅"
+        else
+          "Hostil 😡"
+        end
+
+      true ->
+        "localização desconhecida"
+    end
   end
 end
+```
+
+```elixir
+ElixGames.Encontro.determina_encontro("Caverna Escura", 35)
 ```
 
 ### Exercício 2
@@ -401,7 +430,7 @@ A seguir está um exemplo de como as informações dos clientes estão atualment
 <!-- livebook:{"force_markdown":true} -->
 
 ```elixir
-"Fulano Tal",30,fulano@email.com,+5511995236587;"Ciclano Outro",25,ciclano@email.com,5545996578452
+"Fulano Tal",30,fulano@email.com,+5511995236587;"Ciclano Outro",25,ciclano@email.com,+5545996578452
 ```
 
 > Dê uma olhada como **sigils** funcionam. Principalmente `~s` e `~r`, leia também sobre **expressões regulares**.
@@ -413,37 +442,58 @@ A seguir está um exemplo de como as informações dos clientes estão atualment
 1. Crie uma função chamada `parsear_clientes/1` que receba a string de informações de clientes e a divida em uma lista de informações de clientes formatadas. Use o sigil `~s` para fazer isso.
 
 ```elixir
-def parsear_clientes(informacao) do
-  # A fazer
+~r/\"(?<name>(.*?))\"/
+|> Regex.named_captures("\"vitor\" estevam")
+```
+
+```elixir
+parsear_clientes = fn informacao ->
+  informacao
+  |> String.split(";")
+  |> Enum.map(fn x ->
+    # vários named capture para caso os valores viessem fora de ordem
+    Regex.named_captures(~r/(?<phone>\+[\d]+)/, x)
+    |> Map.merge(Regex.named_captures(~r/\"(?<nome>(.*?))\"/, x))
+    |> Map.merge(Regex.named_captures(~r/(?<email>[\w-\.]+@([\w-]+\.)+[\w-]{2,4})/, x))
+    |> Map.merge(Regex.named_captures(~r/(?<idade>\d{1,3})/, x))
+  end)
 end
 ```
 
 ```elixir
-
+~s("Fulano Tal",30,fulano@email.com,+5511995236587;"Ciclano Outro",25,ciclano@email.com,+5545996578452)
+|> parsear_clientes.()
 ```
 
 1. Crie outra função chamada `extrair_nomes/1` que receba a lista de informações de clientes e retorne uma lista com os nomes dos clientes.
 
 ```elixir
-def extrair_nomes(clientes) do
-  # A fazer
+extrair_nomes = fn informacao ->
+  informacao
+  |> Enum.map(fn x -> Map.get(x, "nome") end)
 end
 ```
 
 ```elixir
 # Caso a entrada fosse o exemplo na descrição deve imprimir ["Fulano Tal", "Ciclano Outro"]
+~s("Fulano Tal",30,fulano@email.com,+5511995236587;"Ciclano Outro",25,ciclano@email.com,+5545996578452)
+|> parsear_clientes.()
+|> extrair_nomes.()
 ```
 
 1. Crie uma terceira função chamada `filtrar_clientes_por_idade/2` que receba a lista de informações de clientes e uma idade mínima e retorne uma lista com as informações dos clientes que têm pelo menos a idade especificada.
 
 ```elixir
-def filtrar_clientes_por_idade(clientes, idade_minima) do
-  # A fazer
+filtrar_clientes_por_idade = fn informacao, idade ->
+  for x <- informacao, Map.get(x, "idade") |> String.to_integer() >= idade, do: x
 end
 ```
 
 ```elixir
 # Deveria imprimir [["Fulano Tal", 30, "fulano@email.com", "+5511995236587"]]
+~s("Fulano Tal",30,fulano@email.com,+5511995236587;"Ciclano Outro",25,ciclano@email.com,+5545996578452)
+|> parsear_clientes.()
+|> filtrar_clientes_por_idade.(30)
 ```
 
 ### Exercicio 3
@@ -477,6 +527,88 @@ calcula_total(produtos, cliente) # deve retornar 243.00
 
 ```elixir
 defmodule Ecommerce do
+  def porcentagem_acumulada(porcentagens) do
+    porcentagens
+    |> Enum.map(fn x -> 1 + x end)
+    |> Enum.reduce(fn x, acc -> acc * x end)
+    |> Kernel.-(1)
+  end
+
+  def desconto_produtos() do
+    fn
+      valor when valor > 1000 ->
+        0.2
+
+      valor when valor > 500 ->
+        0.15
+
+      valor when valor > 200 ->
+        0.1
+
+      _ ->
+        0
+    end
+  end
+
+  def desconto_usuario() do
+    fn
+      cliente when cliente.membro_clube ->
+        0.05
+
+      _ ->
+        0
+    end
+  end
+
+  def desconto_cupom() do
+    fn
+      cliente when cliente.cupom == "UBL10" ->
+        0.1
+
+      _ ->
+        0
+    end
+  end
+
   # A fazer
+  def calcula_total(produtos, cliente) do
+    valor =
+      produtos
+      |> Enum.map(fn x -> x.preco * x.quantidade end)
+      |> Enum.reduce(fn x, acc -> acc + x end)
+
+    desconto = [
+      desconto_produtos().(valor),
+      desconto_usuario().(cliente),
+      desconto_cupom().(cliente)
+    ]
+
+    valor_desconto =
+      desconto
+      |> porcentagem_acumulada
+      |> Kernel.*(valor)
+
+    {valor, valor_desconto, desconto, valor - valor_desconto}
+  end
 end
+```
+
+```elixir
+produtos = [
+  %{nome: "Ração para gatos", preco: 50.00, quantidade: 2},
+  %{nome: "Brinquedo para cachorro", preco: 30.00, quantidade: 1},
+  %{nome: "Aquário", preco: 200.00, quantidade: 1}
+]
+
+cliente = %{
+  membro_clube: true,
+  cupom: "UBL10"
+}
+
+# deve retornar 243.00
+Ecommerce.calcula_total(produtos, cliente)
+```
+
+```elixir
+p = Ecommerce.porcentagem_acumulada([0.1, 0.1, 0.05])
 ```
