@@ -527,22 +527,15 @@ calcula_total(produtos, cliente) # deve retornar 243.00
 
 ```elixir
 defmodule Ecommerce do
-  def porcentagem_acumulada(porcentagens) do
-    porcentagens
-    |> Enum.map(fn x -> 1 + x end)
-    |> Enum.reduce(fn x, acc -> acc * x end)
-    |> Kernel.-(1)
-  end
-
   def desconto_produtos() do
     fn
-      valor when valor > 1000 ->
+      valor when valor >= 1000 ->
         0.2
 
-      valor when valor > 500 ->
+      valor when valor >= 500 ->
         0.15
 
-      valor when valor > 200 ->
+      valor when valor >= 200 ->
         0.1
 
       _ ->
@@ -570,25 +563,27 @@ defmodule Ecommerce do
     end
   end
 
-  # A fazer
   def calcula_total(produtos, cliente) do
     valor =
       produtos
       |> Enum.map(fn x -> x.preco * x.quantidade end)
       |> Enum.reduce(fn x, acc -> acc + x end)
 
-    desconto = [
+    descontos = [
+      # 10%
       desconto_produtos().(valor),
+      # 5%
       desconto_usuario().(cliente),
+      # 10%
       desconto_cupom().(cliente)
     ]
 
-    valor_desconto =
-      desconto
-      |> porcentagem_acumulada
-      |> Kernel.*(valor)
-
-    {valor, valor_desconto, desconto, valor - valor_desconto}
+    valor
+    |> Kernel.-(
+      descontos
+      |> Enum.map(fn x -> valor * x end)
+      |> Enum.sum()
+    )
   end
 end
 ```
@@ -605,10 +600,56 @@ cliente = %{
   cupom: "UBL10"
 }
 
-# deve retornar 243.00
-Ecommerce.calcula_total(produtos, cliente)
+expected = 247.5
+result = Ecommerce.calcula_total(produtos, cliente)
+
+{result, result == expected}
 ```
 
 ```elixir
-p = Ecommerce.porcentagem_acumulada([0.1, 0.1, 0.05])
+produtos = [
+  %{nome: "Ração para gatos", preco: 40, quantidade: 1}
+]
+
+cliente = %{
+  membro_clube: false,
+  cupom: ""
+}
+
+expected = 40
+result = Ecommerce.calcula_total(produtos, cliente)
+
+{result, result == expected}
+```
+
+```elixir
+produtos = [
+  %{nome: "Ração para gatos", preco: 40, quantidade: 1}
+]
+
+cliente = %{
+  membro_clube: false,
+  cupom: "UBL10"
+}
+
+expected = 36
+result = Ecommerce.calcula_total(produtos, cliente)
+
+{result, result == expected}
+```
+
+```elixir
+produtos = [
+  %{nome: "Aquário", preco: 200.00, quantidade: 5}
+]
+
+cliente = %{
+  membro_clube: false,
+  cupom: ""
+}
+
+expected = 800
+result = Ecommerce.calcula_total(produtos, cliente)
+
+{result, result == expected}
 ```
