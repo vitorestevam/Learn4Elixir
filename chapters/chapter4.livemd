@@ -320,23 +320,28 @@ defmodule Idade do
   def calcular_idade(data_aniversario) do
     {ano, mes, dia} = data_aniversario
     now = DateTime.utc_now()
-    age = now.year - ano
-
-    # preciso checar caso o dia do aniversário já tenha passado
+    age = now.year - ano - 1
 
     if mes == now.month && dia == now.day do
       "Hoje você completa #{age + 1} anos, parabéns pelo aniversário!"
     else
-      "#{age} anos"
+      IO.puts(mes <= now.month)
+      IO.puts(dia < now.day)
+
+      if mes <= now.month && dia < now.day do
+        "#{age + 1} anos"
+      else
+        "#{age} anos"
+      end
     end
   end
 end
 ```
 
 ```elixir
-expected = "24 anos"
+expected = "23 anos"
 
-result = Idade.calcular_idade({1999, 12, 11})
+result = Idade.calcular_idade({1999, 10, 30})
 
 {result, result == expected}
 ```
@@ -344,7 +349,15 @@ result = Idade.calcular_idade({1999, 12, 11})
 ```elixir
 expected = "Hoje você completa 24 anos, parabéns pelo aniversário!"
 
-result = Idade.calcular_idade({1999, 12, 11})
+result = Idade.calcular_idade({1999, 10, 29})
+
+{result, result == expected}
+```
+
+```elixir
+expected = "24 anos"
+
+result = Idade.calcular_idade({1999, 10, 28})
 
 {result, result == expected}
 ```
