@@ -88,11 +88,13 @@ Quando eu chego a avaliar a célula acima, o processo já foi executado e já mo
 Agora veja um exemplo usando Task.start/1 para criar um processo que imprime "Hello, World!" após um atraso de 2 segundos.
 
 ```elixir
-task =
+{ok, pid} =
   Task.start(fn ->
     :timer.sleep(2000)
     IO.puts("Hello, World!")
   end)
+
+Process.alive?(pid)
 ```
 
 Observe que no caso acima incluímos um 'IO.puts' para poder ver o que o processo fez. Observe também que o Task.start retornou uma tupla contendo :ok e o PID.
@@ -133,6 +135,10 @@ emissor =
   spawn(fn ->
     send(receptor, {:mensagem, "Oi, de outro processo!"})
   end)
+```
+
+```elixir
+Process.alive?(receptor)
 ```
 
 No exemplo acima, criamos um processo 'receptor' que fica esperando receber uma tupla contendo :mensagem e uma mensagem. Depois criamos um processo 'emissor' que envia uma mensagem para 'receptor'. Logo depois de enviar a mensagem, 'emissor' morre. Logo depois de receber a mensagem, 'receptor' escreve a (usando IO.puts) no dispositivo de saída (no caso, uma célula do Livebook). Depois disso, 'receptor' morre.
@@ -263,7 +269,32 @@ Vamos criar um sistema simples para rastrear o número de acessos a uma página 
 Escreva sua solução na célula abaixo. Se necessário, crie mais células.
 
 ```elixir
-"Coloque aqui sua solução"
+defmodule GerenciadorDeAcesso do
+  def inicia do
+    {:ok, agent} = Agent.start(fn -> [] end)
+    agent
+  end
+
+  def registrar_acesso(agent) do
+    Agent.update(agent, fn state -> Enum.concat(state, [DateTime.now("Etc/UTC")]) end)
+  end
+
+  def obter_acessos(agent) do
+    Agent.get(agent, fn state -> state end)
+  end
+end
+```
+
+```elixir
+agente = GerenciadorDeAcesso.inicia()
+
+GerenciadorDeAcesso.registrar_acesso(agente)
+
+:timer.sleep(2000)
+
+GerenciadorDeAcesso.registrar_acesso(agente)
+
+GerenciadorDeAcesso.obter_acessos(agente)
 ```
 
 ## Exercício 2
@@ -285,7 +316,48 @@ Considere o caso em que a data de nascimento fornecida está no futuro em relaç
 Este exercício permitirá que você pratique a manipulação de datas em Elixir, incluindo o cálculo de anos bissextos, a diferença entre datas e a formatação dos resultados.
 
 ```elixir
-def calcular_idade(data_aniversario) do
-  # Escreva aqui a sua solução
+defmodule Idade do
+  def calcular_idade(data_aniversario) do
+    {ano, mes, dia} = data_aniversario
+    now = DateTime.utc_now()
+    age = now.year - ano - 1
+
+    if mes == now.month && dia == now.day do
+      "Hoje você completa #{age + 1} anos, parabéns pelo aniversário!"
+    else
+      IO.puts(mes <= now.month)
+      IO.puts(dia < now.day)
+
+      if mes <= now.month && dia < now.day do
+        "#{age + 1} anos"
+      else
+        "#{age} anos"
+      end
+    end
+  end
 end
+```
+
+```elixir
+expected = "23 anos"
+
+result = Idade.calcular_idade({1999, 10, 30})
+
+{result, result == expected}
+```
+
+```elixir
+expected = "Hoje você completa 24 anos, parabéns pelo aniversário!"
+
+result = Idade.calcular_idade({1999, 10, 29})
+
+{result, result == expected}
+```
+
+```elixir
+expected = "24 anos"
+
+result = Idade.calcular_idade({1999, 10, 28})
+
+{result, result == expected}
 ```
